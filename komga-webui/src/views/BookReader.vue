@@ -1,9 +1,12 @@
 <template>
-  <v-container class="ma-0 pa-0 full-height" fluid v-if="pages.length > 0" style="width: 100%;"
+  <v-container class="ma-0 pa-0 full-height" fluid v-if="pages.length > 0"
+               :style="`width: 100%; background-color: ${backgroundColor}`"
                v-touch="{
-       left: () => turnRight(),
-       right: () => turnLeft(),
-       }"
+                 left: () => turnRight(),
+                 right: () => turnLeft(),
+                 up: () => verticalNext(),
+                 down: () => verticalPrev()
+                 }"
   >
     <div>
       <v-slide-y-transition>
@@ -122,6 +125,7 @@
                   :show-arrows="false"
                   :continuous="false"
                   :reverse="flipDirection"
+                  :vertical="vertical"
                   hide-delimiters
                   touchless
                   height="100%"
@@ -134,7 +138,7 @@
                          :transition="animations ? undefined : false"
                          :reverse-transition="animations ? undefined : false"
         >
-          <div class="full-height d-flex flex-column justify-center reader-background">
+          <div class="full-height d-flex flex-column justify-center">
             <div :class="`d-flex flex-row${flipDirection ? '-reverse' : ''} justify-center px-0 mx-0` ">
               <img :src="getPageUrl(p)"
                    :height="maxHeight"
@@ -158,10 +162,9 @@
       :pagesCount="pagesCount"
     ></thumbnail-explorer-dialog>
 
-    <v-dialog
+    <v-bottom-sheet
       v-model="menu"
       :close-on-content-click="false"
-      transition="dialog-bottom-transition"
       :width="$vuetify.breakpoint.width * ($vuetify.breakpoint.smAndUp ? 0.5 : 1)"
       @keydown.esc.stop=""
     >
@@ -175,50 +178,40 @@
 
         <v-list class="full-height full-width">
           <v-list-item>
-            <settings-switch v-model="doublePages" label="Page Layout" :status="`${ doublePages ? 'Double Pages' : 'Single Page'}`"></settings-switch>
+            <settings-switch v-model="doublePages" label="Page Layout"
+                             :status="`${ doublePages ? 'Double Pages' : 'Single Page'}`"></settings-switch>
           </v-list-item>
           <v-list-item>
             <settings-switch v-model="animations" label="Page Transitions"></settings-switch>
           </v-list-item>
+
           <v-list-item>
             <settings-select
-              :items="settings.readingDirections"
-              v-model="readingDirection"
-              label="Reading Direction"
+              :items="backgroundColors"
+              v-model="backgroundColor"
+              label="Background color"
             >
-              <template v-slot:item="data">
-                <div class="text-capitalize">
-                  {{ readingDirectionDisplay(data.item) }}
-                </div>
-              </template>
-              <template v-slot:selection="data">
-                <div class="text-capitalize">
-                  {{ readingDirectionDisplay(data.item) }}
-                </div>
-              </template>
             </settings-select>
           </v-list-item>
+
           <v-list-item>
             <settings-select
-              :items="settings.imageFits"
+              :items="readingDirs"
+              v-model="readingDirection"
+              label="Reading Direction"
+            />
+          </v-list-item>
+
+          <v-list-item>
+            <settings-select
+              :items="imageFits"
               v-model="imageFit"
               label="Scaling"
-            >
-              <template v-slot:item="data">
-                <div class="text-capitalize">
-                  {{ imageFitDisplay(data.item) }}
-                </div>
-              </template>
-              <template v-slot:selection="data">
-                <div class="text-capitalize">
-                  {{ imageFitDisplay(data.item) }}
-                </div>
-              </template>
-            </settings-select>
+            />
           </v-list-item>
         </v-list>
       </v-container>
-    </v-dialog>
+    </v-bottom-sheet>
     <v-snackbar
       v-model="jumpToPreviousBook"
       :timeout="jumpConfirmationDelay"
@@ -249,6 +242,24 @@
         <p v-else>Click or press next again<br/>to exit the reader.</p>
       </div>
     </v-snackbar>
+
+    <v-snackbar v-model="snackReadingDirection"
+                color="info"
+                multi-line
+                vertical
+                top
+    >
+      <div>This book has specific reading direction set.</div>
+      <div>Reading direction has been set to <span class="font-weight-bold">{{ readingDirs.find(x => x.value === readingDirection).text }}</span>.
+      </div>
+      <div>This only applies to this book and will not overwrite your settings.</div>
+      <v-btn
+        text
+        @click="snackReadingDirection = false"
+      >
+        Dismiss
+      </v-btn>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -259,23 +270,20 @@ import ThumbnailExplorerDialog from '@/components/ThumbnailExplorerDialog.vue'
 
 import { checkWebpFeature } from '@/functions/check-webp'
 import { bookPageUrl } from '@/functions/urls'
-import { ImageFit, ReadingDirection } from '@/types/common'
 import Vue from 'vue'
 import { getBookTitleCompact } from '@/functions/book-title'
+import { ReadingDirection } from '@/types/enum-books'
 
 const cookieFit = 'webreader.fit'
 const cookieReadingDirection = 'webreader.readingDirection'
 const cookieDoublePages = 'webreader.doublePages'
 const cookieAnimations = 'webreader.animations'
+const cookieBackground = 'webreader.background'
 
-const fitDisplay = {
-  [ImageFit.HEIGHT]: 'fit to height',
-  [ImageFit.WIDTH]: 'fit to width',
-  [ImageFit.ORIGINAL]: 'original'
-}
-const dirDisplay = {
-  [ReadingDirection.RightToLeft]: 'right to left',
-  [ReadingDirection.LeftToRight]: 'left to right'
+enum ImageFit {
+  WIDTH = 'width',
+  HEIGHT = 'height',
+  ORIGINAL = 'original'
 }
 
 export default Vue.extend({
@@ -291,6 +299,7 @@ export default Vue.extend({
       jumpToNextBook: false,
       jumpToPreviousBook: false,
       jumpConfirmationDelay: 3000,
+      snackReadingDirection: false,
       pages: [] as PageDto[],
       supportedMediaTypes: ['image/jpeg', 'image/png', 'image/gif'],
       convertTo: 'jpeg',
@@ -304,10 +313,24 @@ export default Vue.extend({
         doublePages: false,
         imageFits: Object.values(ImageFit),
         fit: ImageFit.HEIGHT,
-        readingDirections: Object.values(ReadingDirection),
-        readingDirection: ReadingDirection.LeftToRight,
-        animations: true
-      }
+        readingDirection: ReadingDirection.LEFT_TO_RIGHT,
+        animations: true,
+        backgroundColor: 'black'
+      },
+      readingDirs: [
+        { text: 'Left to right', value: ReadingDirection.LEFT_TO_RIGHT },
+        { text: 'Right to left', value: ReadingDirection.RIGHT_TO_LEFT },
+        { text: 'Vertical', value: ReadingDirection.VERTICAL }
+      ],
+      imageFits: [
+        { text: 'Fit to height', value: ImageFit.HEIGHT },
+        { text: 'Fit to width', value: ImageFit.WIDTH },
+        { text: 'Original', value: ImageFit.ORIGINAL }
+      ],
+      backgroundColors: [
+        { text: 'White', value: 'white' },
+        { text: 'Black', value: 'black' }
+      ]
     }
   },
   created () {
@@ -319,7 +342,6 @@ export default Vue.extend({
   },
   async mounted () {
     window.addEventListener('keydown', this.keyPressed)
-    this.setup(this.bookId, Number(this.$route.query.page))
 
     this.loadFromCookie(cookieReadingDirection, (v) => {
       this.readingDirection = v
@@ -335,6 +357,13 @@ export default Vue.extend({
         this.imageFit = v
       }
     })
+    this.loadFromCookie(cookieBackground, (v) => {
+      if (v) {
+        this.backgroundColor = v
+      }
+    })
+
+    this.setup(this.bookId, Number(this.$route.query.page))
   },
   destroyed () {
     window.removeEventListener('keydown', this.keyPressed)
@@ -422,13 +451,10 @@ export default Vue.extend({
       }
     },
     flipDirection (): boolean {
-      switch (this.readingDirection) {
-        case ReadingDirection.LeftToRight:
-          return false
-        case ReadingDirection.RightToLeft:
-        default:
-          return true
-      }
+      return this.readingDirection === ReadingDirection.RIGHT_TO_LEFT
+    },
+    vertical (): boolean {
+      return this.readingDirection === ReadingDirection.VERTICAL
     },
     imageFit: {
       get: function (): ImageFit {
@@ -437,6 +463,15 @@ export default Vue.extend({
       set: function (fit: ImageFit): void {
         this.settings.fit = fit
         this.$cookies.set(cookieFit, fit, Infinity)
+      }
+    },
+    backgroundColor: {
+      get: function (): string {
+        return this.settings.backgroundColor
+      },
+      set: function (color: string): void {
+        this.settings.backgroundColor = color
+        this.$cookies.set(cookieBackground, color, Infinity)
       }
     },
     doublePages: {
@@ -452,9 +487,6 @@ export default Vue.extend({
     }
   },
   methods: {
-    swipe (direction: string) {
-      alert(direction)
-    },
     keyPressed (e: KeyboardEvent) {
       switch (e.key) {
         case 'PageUp':
@@ -464,6 +496,12 @@ export default Vue.extend({
         case 'PageDown':
         case 'ArrowLeft':
           this.flipDirection ? this.next() : this.prev()
+          break
+        case 'ArrowDown':
+          if (this.vertical) this.next()
+          break
+        case 'ArrowUp':
+          if (this.vertical) this.prev()
           break
         case 'Home':
           this.goToFirst()
@@ -489,6 +527,10 @@ export default Vue.extend({
             this.menu = false
             break
           }
+          if (this.toolbar) {
+            this.toolbar = false
+            break
+          }
           this.closeBook()
           break
       }
@@ -500,6 +542,17 @@ export default Vue.extend({
         this.goTo(page)
       } else {
         this.goToFirst()
+      }
+
+      // set non-persistent reading direction if exists in metadata
+      switch (this.book.metadata.readingDirection) {
+        case ReadingDirection.LEFT_TO_RIGHT:
+        case ReadingDirection.RIGHT_TO_LEFT:
+        case ReadingDirection.VERTICAL:
+          // bypass setter so cookies aren't set
+          this.settings.readingDirection = this.book.metadata.readingDirection
+          this.snackReadingDirection = true
+          break
       }
 
       try {
@@ -521,10 +574,18 @@ export default Vue.extend({
       }
     },
     turnRight () {
+      if (this.vertical) return
       return this.flipDirection ? this.prev() : this.next()
     },
     turnLeft () {
+      if (this.vertical) return
       return this.flipDirection ? this.next() : this.prev()
+    },
+    verticalPrev () {
+      if (this.vertical) this.prev()
+    },
+    verticalNext () {
+      if (this.vertical) this.next()
     },
     prev () {
       if (this.canPrev) {
@@ -603,12 +664,6 @@ export default Vue.extend({
       }
       return this.$vuetify.breakpoint.width
     },
-    imageFitDisplay (fit: ImageFit): string {
-      return fitDisplay[fit]
-    },
-    readingDirectionDisplay (dir: ReadingDirection): string {
-      return dirDisplay[dir]
-    },
     loadFromCookie (cookieKey: string, setter: (value: any) => void): void {
       if (this.$cookies.isKey(cookieKey)) {
         let value = this.$cookies.get(cookieKey)
@@ -620,11 +675,6 @@ export default Vue.extend({
 </script>
 
 <style scoped>
-
-.reader-background {
-  background-color: white; /* TODO add a setting for this, some books might not be white */
-}
-
 .settings {
   /*position: absolute;*/
   z-index: 2;

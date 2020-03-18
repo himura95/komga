@@ -1,3 +1,57 @@
+# [0.24.0](https://github.com/gotson/komga/compare/v0.23.0...v0.24.0) (2020-03-18)
+
+
+### Bug Fixes
+
+* **add library:** special characters handling ([15afa93](https://github.com/gotson/komga/commit/15afa9343155aecee4132cb0ceedbfb5bf22b229))
+
+
+### Features
+
+* **book reader:** set reading direction from metadata ([30e766b](https://github.com/gotson/komga/commit/30e766be16dff121577ebb24d11881f73450c5cd))
+* **book reader:** vertical reading mode ([ca03111](https://github.com/gotson/komga/commit/ca03111b0b4246239bad84b79d7d179975d722aa))
+
+# [0.23.0](https://github.com/gotson/komga/compare/v0.22.2...v0.23.0) (2020-03-18)
+
+
+### Features
+
+* **book reader:** background color settings ([2c87e7b](https://github.com/gotson/komga/commit/2c87e7bba6f33c52313d5b28690cf179eaac8c85)), closes [#113](https://github.com/gotson/komga/issues/113)
+* **book reader:** pressing ESC will close the toolbars ([791f5df](https://github.com/gotson/komga/commit/791f5dff0878a72a5d34f8e201090e656492784c))
+
+## [0.22.2](https://github.com/gotson/komga/compare/v0.22.1...v0.22.2) (2020-03-17)
+
+
+### Bug Fixes
+
+* **webui:** change page size on media analysis screen ([afc2cd4](https://github.com/gotson/komga/commit/afc2cd4e7002aeea440477203af0ac9d67cbdbb3))
+
+## [0.22.1](https://github.com/gotson/komga/compare/v0.22.0...v0.22.1) (2020-03-17)
+
+
+### Bug Fixes
+
+* use JDBC update statements for database migration ([f68e035](https://github.com/gotson/komga/commit/f68e0352fdfd6d4683d4015c4b21bad6bcd070dc))
+
+# [0.22.0](https://github.com/gotson/komga/compare/v0.21.0...v0.22.0) (2020-03-17)
+
+
+### Features
+
+* support for book metadata ([6a53e8f](https://github.com/gotson/komga/commit/6a53e8fd6b53533020b9e06a14028f9776e641af)), closes [#48](https://github.com/gotson/komga/issues/48) [#43](https://github.com/gotson/komga/issues/43)
+
+# [0.21.0](https://github.com/gotson/komga/compare/v0.20.0...v0.21.0) (2020-03-10)
+
+
+### Bug Fixes
+
+* **scanner:** follow symlinks when scanning libraries ([1044262](https://github.com/gotson/komga/commit/1044262a1c2c7be47002a1128b2374051fa4f7fc)), closes [#96](https://github.com/gotson/komga/issues/96)
+
+
+### Features
+
+* docker multi-arch images ([d54c67b](https://github.com/gotson/komga/commit/d54c67b3df0d0c4d753e0057d3349720e819eca5))
+
 # [0.20.0](https://github.com/gotson/komga/compare/v0.19.0...v0.20.0) (2020-03-05)
 
 

@@ -9,6 +9,9 @@
       sort-by="media.status"
       multi-sort
       class="elevation-1"
+      :footer-props="{
+        itemsPerPageOptions: [20, 50, 100]
+      }"
     >
       <template v-slot:item.name="{ item }">
         <router-link :to="{name:'browse-book', params: {bookId: item.id}}">{{ item.name }}</router-link>
@@ -18,8 +21,8 @@
 </template>
 
 <script lang="ts">
-import { MediaStatus } from '@/types/common'
 import Vue from 'vue'
+import { MediaStatus } from '@/types/enum-books'
 
 export default Vue.extend({
   name: 'SettingsMediaAnalysis',

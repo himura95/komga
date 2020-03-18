@@ -120,9 +120,8 @@
 </template>
 
 <script lang="ts">
-import { capitalize } from '@/functions/text'
-import { SeriesStatus } from '@/types/common'
 import Vue from 'vue'
+import { SeriesStatus } from '@/types/enum-series'
 
 export default Vue.extend({
   name: 'EditSeriesDialog',
@@ -163,8 +162,11 @@ export default Vue.extend({
     multiple (): boolean {
       return Array.isArray(this.series)
     },
-    seriesStatus (): string[] {
-      return Object.keys(SeriesStatus).map(x => capitalize(x))
+    seriesStatus (): any[] {
+      return Object.keys(SeriesStatus).map(x => ({
+        text: this.$_.capitalize(x),
+        value: x
+      }))
     },
     dialogTitle (): string {
       return this.multiple
@@ -177,17 +179,11 @@ export default Vue.extend({
       if (Array.isArray(series) && series.length === 0) return
       if (Array.isArray(series) && series.length > 0) {
         const status = this.$_.uniq(series.map(x => x.metadata.status))
-        this.form.status = status.length > 1 ? '' : capitalize(status[0])
+        this.form.status = status.length > 1 ? '' : status[0]
         const statusLock = this.$_.uniq(series.map(x => x.metadata.statusLock))
         this.form.statusLock = statusLock.length > 1 ? false : statusLock[0]
       } else {
-        const s = series as SeriesDto
-        this.form.status = capitalize(s.metadata.status)
-        this.form.statusLock = s.metadata.statusLock
-        this.form.title = s.metadata.title
-        this.form.titleLock = s.metadata.titleLock
-        this.form.titleSort = s.metadata.titleSort
-        this.form.titleSortLock = s.metadata.titleSortLock
+        this.$_.merge(this.form, (series as SeriesDto).metadata)
       }
     },
     dialogCancel () {
@@ -211,7 +207,7 @@ export default Vue.extend({
             return
           }
           const metadata = {
-            status: this.form.status.toUpperCase(),
+            status: this.form.status,
             statusLock: this.form.statusLock
           } as SeriesMetadataUpdateDto
 
